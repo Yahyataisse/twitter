@@ -26,9 +26,9 @@ export default function NewTweet({ token, handleSubmit }: NewTweetProps) {
     const mutation = useMutation({
         mutationFn: createTweet,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["tweets"] });
+            queryClient.invalidateQueries(["tweets"]);
         },
-        onError: (error) => console.log(error),
+        onError: (error) => console.error("Error creating tweet:", error),
     });
 
     const handlePhotoChange = (file: File) => {
@@ -51,12 +51,16 @@ export default function NewTweet({ token, handleSubmit }: NewTweetProps) {
         validationSchema: validationSchema,
         onSubmit: async (values, { resetForm }) => {
             if (photoFile) {
-                const path: string | void = await uploadFile(photoFile);
-                if (!path) throw new Error("Error uploading image.");
-                values.photoUrl = path;
-                setPhotoFile(null);
+                try {
+                    const path: string = await uploadFile(photoFile);
+                    values.photoUrl = path;
+                    setPhotoFile(null);
+                } catch (error) {
+                    console.error("Error uploading image:", error);
+                    // يمكنك إضافة إجراءات إضافية هنا في حالة حدوث خطأ في رفع الصورة
+                }
             }
-            mutation.mutate(JSON.stringify(values));
+            mutation.mutate(values);
             resetForm();
             setCount(0);
             setShowDropzone(false);
@@ -69,7 +73,7 @@ export default function NewTweet({ token, handleSubmit }: NewTweetProps) {
         formik.handleChange(e);
     };
 
-    if (formik.isSubmitting) {
+    if (mutation.isLoading) {
         return <CircularLoading />;
     }
 
